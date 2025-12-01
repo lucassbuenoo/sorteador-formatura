@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sorteador Oficial da Formatura SENAI 2025</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      --bg:#020617;
+      --card:#0f172a;
+      --accent:#e30613;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at top,#0b1220,var(--bg));color:var(--text);min-height:100vh;display:flex;justify-content:center}
+
+    .app{width:100%;max-width:900px;padding:14px}
+
+    header{display:flex;align-items:center;justify-content:flex-start;gap:14px;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo-senai{width:200px;height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logo-senai a{display:block;width:100%;height:100%;background:url('./logo_senai.png') center/contain no-repeat;text-decoration:none}
+    header h1{font-size:22px;margin:0}
+    header p{font-size:13px;color:var(--muted)}
+
+    .result-box{display:none}
+    .result-display{font-size:20px;font-weight:900;letter-spacing:1px}
+
+    .layout{display:grid;grid-template-columns:4fr 1fr;gap:16px}
+
+    @media(max-width:900px){
+      .layout{grid-template-columns:1fr}
+    }
+    
+
+    /* SLOT MACHINE */
+    .slot-wrap{width:100%;display:flex;justify-content:center}
+    .slot-machine{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;background:linear-gradient(180deg,#111827,#020617);padding:18px;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,0.6)}
+
+    .reel{width:200px;height:260px;overflow:hidden;border-radius:16px;background:#020617;border:2px solid rgba(255,255,255,0.1);display:flex;align-items:flex-start;justify-content:center}
+    .reel-inner{will-change:transform}
+
+    .digit{width:200px;height:260px;display:flex;align-items:center;justify-content:center;font-size:110px;font-weight:900;color:#ffca28;text-shadow:0 0 12px rgba(255,202,40,0.4)}
+
+    .slot-glass{position:absolute;inset:0;border-radius:18px;box-shadow:inset 0 0 30px rgba(0,0,0,0.8)}
+    .slot-frame{position:absolute;inset:-6px;border-radius:22px;border:2px solid rgba(255,255,255,0.08)}
+
+    .controls{background:var(--card);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;display:grid;gap:12px}
+
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+    label{font-size:12px;color:var(--muted)}
+    input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:#020617;color:var(--text)}
+
+    button{padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#e30613,#b90510);color:#fff;font-weight:900;cursor:pointer}
+    button.secondary{background:#111827}
+
+    .history{margin-top:6px;font-size:14px;max-height:260px;overflow:auto;padding-right:4px}
+    .history-item{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 0;
+  margin-bottom:8px;
+  border-radius:10px;
+  font-weight:900;
+  font-size:18px;
+  background:linear-gradient(180deg,#111827,#020617);
+  box-shadow:0 6px 16px rgba(0,0,0,0.45);
+  border:1px solid rgba(255,255,255,0.08)
+}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <header>
+      <div class="brand">
+        <div class="logo-senai"><a href="./logo_senai.png" aria-label="Logo SENAI"></a></div>
+        <div>
+          <h1>Sorteador Formatura</h1>
+          <p>SENAI - Mogi Guaçu 2025</p>
+        </div>
+      </div>
+
+      <div class="result-box">
+        <div class="result-display" id="lastResult">—</div>
+      </div>
+    </header>
+
+    <div class="layout">
+
+      <div class="slot-wrap">
+        <div class="slot-machine">
+          <div class="reel"><div class="reel-inner" id="reel1"></div></div>
+          <div class="reel"><div class="reel-inner" id="reel2"></div></div>
+          <div class="reel"><div class="reel-inner" id="reel3"></div></div>
+          <div class="slot-glass"></div>
+          <div class="slot-frame"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="row">
+          <div style="grid-column:1 / -1">
+            <label>
+              <input type="checkbox" id="noRepeat" />&nbsp;Não repetir números
+            </label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>De</label>
+            <input type="number" id="start" value="1" />
+          </div>
+          <div>
+            <label>Até</label>
+            <input type="number" id="end" value="100" />
+          </div>
+        </div>
+
+        <button id="spinBtn">GIRAR</button>
+        <button class="secondary" id="clearHistory">Limpar Histórico</button>
+
+        <div class="history" id="historyList"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+<script>
+  const reel1 = document.getElementById('reel1');
+  const reel2 = document.getElementById('reel2');
+  const reel3 = document.getElementById('reel3');
+
+  const spinBtn = document.getElementById('spinBtn');
+  const startInput = document.getElementById('start');
+  const endInput = document.getElementById('end');
+  // quantidade removida: sorteio sempre será 1 por vez
+  const noRepeat = document.getElementById('noRepeat');
+  const lastResult = document.getElementById('lastResult');
+  const historyList = document.getElementById('historyList');
+
+  let usedNumbers = new Set();
+  let history = [];
+  let isSpinning = false;
+
+  function buildReels(){
+    [reel1,reel2,reel3].forEach(reel=>{
+      reel.innerHTML='';
+      for(let i=0;i<12;i++){
+        for(let d=0;d<=9;d++){
+          const div=document.createElement('div');
+          div.className='digit';
+          div.textContent=d;
+          reel.appendChild(div);
+        }
+      }
+      reel.style.transition = 'none';
+      reel.style.transform = 'translateY(0)';
+    });
+  }
+
+  function spinReelTo(reel, digit, duration){
+    const digitHeight = 260; // altura atual do .digit
+    const loops = 6 + Math.floor(Math.random()*6);
+    const offset = (loops * 10 + digit) * digitHeight;
+
+    // reset immediately then apply transition
+    reel.style.transition = 'none';
+    reel.style.transform = 'translateY(0)';
+
+    // apply in next frame so transition runs
+    requestAnimationFrame(()=>{
+      reel.style.transition = `transform ${duration}ms cubic-bezier(.2,.8,.2,1)`;
+      reel.style.transform = `translateY(-${offset}px)`;
+    });
+
+    // return the final visual offset we want to normalize to after animation
+    return {digit, digitHeight};
+  }
+
+  async function runDraw(){
+    if(isSpinning) return; // evita cliques múltiplos
+
+    const start = parseInt(startInput.value,10);
+    const end = parseInt(endInput.value,10);
+
+    if(isNaN(start)||isNaN(end)||end<start){
+      alert('Intervalo inválido');return;
+    }
+
+    let pool=[];
+    for(let i=start;i<=end;i++){
+      if(!noRepeat.checked||!usedNumbers.has(i)) pool.push(i);
+    }
+
+    if(pool.length===0){alert('Sem números disponíveis');return;}
+
+    const drawn = pool[Math.floor(Math.random()*pool.length)];
+    const s = String(drawn).padStart(3,'0');
+
+    isSpinning = true;
+    spinBtn.disabled = true;
+
+    // start reels
+    spinReelTo(reel1, Number(s[0]), 2800);
+    spinReelTo(reel2, Number(s[1]), 3200);
+    spinReelTo(reel3, Number(s[2]), 3600);
+
+    // wait until animation should have finished
+    await new Promise(r=>setTimeout(r, 3800));
+
+    // normalize transforms so values don't grow infinitely and remain consistent for next spins
+    [
+      {reel:reel1, digit:Number(s[0])},
+      {reel:reel2, digit:Number(s[1])},
+      {reel:reel3, digit:Number(s[2])}
+    ].forEach(item=>{
+      const dH = 260;
+      // keep one loop + digit so position is small but shows correct digit
+      const finalPos = (10 + item.digit) * dH;
+      item.reel.style.transition = 'none';
+      item.reel.style.transform = `translateY(-${finalPos}px)`;
+    });
+
+    lastResult.textContent = drawn;
+
+    if(noRepeat.checked) usedNumbers.add(drawn);
+
+    history.unshift({n:drawn});
+    renderHistory();
+
+    isSpinning = false;
+    spinBtn.disabled = false;
+  }
+
+  function renderHistory(){
+    historyList.innerHTML='';
+    history.forEach(h=>{
+      const div=document.createElement('div');
+      div.className='history-item';
+      div.textContent = h.n;
+      historyList.appendChild(div);
+    });
+  }
+
+  document.getElementById('clearHistory').onclick=()=>{
+    history=[];
+    usedNumbers.clear();
+    renderHistory();
+    lastResult.textContent='—';
+  };
+
+  spinBtn.addEventListener('click', runDraw);
+
+  buildReels();
+</script>
+</body>
+</html>
